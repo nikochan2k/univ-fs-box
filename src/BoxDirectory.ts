@@ -22,26 +22,26 @@ export class BoxDirectory extends AbstractDirectory {
       const client = await bfs._getClient();
       const list: EntryInfo[] = await client.folders.getItems(parent?.id);
       const items: Item[] = [];
-      for (const i of list) {
-        if (i.item_status !== "active") {
+      for (const info of list) {
+        if (info.item_status !== "active") {
           continue;
         }
 
-        const item: Item = { path: path + "/" + i.name };
-        const createdDate = new Date(i.created_at as string);
+        const item: Item = { path: path + "/" + info.name };
+        const createdDate = new Date(info.created_at as string);
         const created = createdDate.getTime();
         if (!isNaN(created)) {
           item.created = created;
         }
-        const modifiedDate = new Date(i.modified_at as string);
+        const modifiedDate = new Date(info.modified_at as string);
         const modified = modifiedDate.getTime();
         if (!isNaN(modified)) {
           item.modified = modified;
         }
-        item.etag = i.etag as string;
-        if (i.type === "file") {
+        item.etag = info.etag as string;
+        if (info.type === "file") {
           item.type = EntryType.File;
-          item.size = i.size as number;
+          item.size = info.size as number;
         } else {
           item.type = EntryType.Directory;
         }

@@ -1,3 +1,4 @@
+import { Readable } from "stream";
 import { Data } from "univ-conv";
 import {
   AbstractFile,
@@ -21,13 +22,17 @@ export class BoxFile extends AbstractFile {
       const client = await bfs._getClient();
       const info = await bfs._getInfo(path);
       return new Promise<Data>((resolve, reject) => {
-        client.files.getReadStream(info.id, null, (err: any, stream: any) => {
-          if (err) {
-            reject(err);
-            return;
+        client.files.getReadStream(
+          info.id,
+          null,
+          (err: any, stream: Readable) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            resolve(stream);
           }
-          resolve(stream);
-        });
+        );
       });
     } catch (e) {
       throw bfs._error(path, e, true);

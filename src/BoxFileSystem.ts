@@ -156,10 +156,11 @@ export class BoxFileSystem extends AbstractFileSystem {
     let parent = await this._getInfoFromFullPath(parentPath);
     const client = await this._getClient();
     const items = await client.folders.getItems(parent?.id);
-    for (const e of items.entries) {
-      const childPath = (parentPath === "/" ? "" : parentPath) + "/" + e.name;
+    for (const entry of items.entries) {
+      const childPath =
+        (parentPath === "/" ? "" : parentPath) + "/" + entry.name;
       if (fullPath === childPath) {
-        return e;
+        return entry;
       }
     }
     return undefined;
@@ -177,18 +178,16 @@ export class BoxFileSystem extends AbstractFileSystem {
         });
       }
       const stats: Stats = info as any;
-      const createdAt = info.created_at;
-      const created = createdAt ? new Date(createdAt).getDate() : NaN;
+      const created = new Date(info.created_at as string).getDate();
       if (!isNaN(created)) {
         stats.created = created;
       }
-      const modifiedAt = info["modified_at"];
-      const modified = modifiedAt ? new Date(modifiedAt).getDate() : NaN;
+      const modified = new Date(info.modified_at as string).getDate();
       if (!isNaN(modified)) {
         stats.modified = modified;
       }
       if (info.type === "folder") {
-        delete stats["size"];
+        delete stats.size;
       }
 
       return stats;
