@@ -59,12 +59,13 @@ export class BoxFile extends AbstractFile {
     const bfs = this.bfs;
     const path = this.path;
     try {
-      const client = await bfs._getClient();
-      const name = getName(path);
-      const parentPath = getParentPath(path);
+      const fullPath = bfs._getFullPath(path);
+      const parentPath = getParentPath(fullPath);
+      const name = getName(fullPath);
       const info = await bfs._getInfo(parentPath);
       const converter = this._getConverter();
       const readable = await converter.toReadable(data, options);
+      const client = await bfs._getClient();
       await client.files.uploadFile(info, name, readable);
     } catch (e) {
       throw bfs._error(path, e, true);

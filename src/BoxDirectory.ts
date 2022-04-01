@@ -57,13 +57,16 @@ export class BoxDirectory extends AbstractDirectory {
     const bfs = this.bfs;
     const path = this.path;
     try {
-      const client = await bfs._getClient();
-      const name = getName(path);
-      const parentPath = getParentPath(path);
+      const fullPath = bfs._getFullPath(path);
+      const parentPath = getParentPath(fullPath);
+      const name = getName(fullPath);
       const info = await bfs._getInfo(parentPath);
+      const client = await bfs._getClient();
       await client.folders.create(info.id, name);
     } catch (e) {
-      throw bfs._error(path, e, true);
+      if (e.statusCode !== 409) {
+        throw bfs._error(path, e, true);
+      }
     }
   }
 

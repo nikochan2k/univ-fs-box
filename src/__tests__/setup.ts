@@ -10,7 +10,9 @@ export const fs = new BoxFileSystem(
 
 export const setup = async () => {
   try {
-    fs.del("/", { recursive: true, ignoreHook: true, force: true });
+    const root = await fs._getDirectory("/");
+    await root.rm({ force: true, recursive: true, ignoreHook: true });
+    await root.mkdir({ force: true, recursive: false, ignoreHook: true });
   } catch (e) {
     if (e.name !== NotFoundError.name) {
       throw e;

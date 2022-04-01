@@ -51,6 +51,13 @@ export interface EntryInfo extends Info {
   parent?: Info;
 }
 
+const ROOT_FOLDER: EntryInfo = {
+  id: "0",
+  type: "folder",
+  name: "",
+  item_status: "active",
+};
+
 export class BoxFileSystem extends AbstractFileSystem {
   private readonly id: string;
   private readonly isBasicClient: boolean;
@@ -108,9 +115,13 @@ export class BoxFileSystem extends AbstractFileSystem {
       this.client = this.sdk.getAppAuthClient("enterprise", this.id);
     }
 
-    const dir = await this.getDirectory("/");
-    await dir.mkdir({ ignoreHook: true, force: true, recursive: true });
-
+    try {
+      await this.client.folders.create("0", this.repository);
+    } catch (e) {
+      if (e.statusCode !== 409) {
+        throw e;
+      }
+    }
     return this.client;
   }
 
@@ -149,7 +160,7 @@ export class BoxFileSystem extends AbstractFileSystem {
     fullPath: string
   ): Promise<EntryInfo | undefined> {
     if (fullPath === "/") {
-      return { id: "0", type: "folder", name: "", item_status: "active" };
+      return ROOT_FOLDER;
     }
 
     const parentPath = getParentPath(fullPath);
