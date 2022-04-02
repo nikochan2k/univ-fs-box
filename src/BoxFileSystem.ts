@@ -34,21 +34,18 @@ export interface BoxCredentials {
 }
 
 export interface Info {
-  type: "file" | "folder";
-  id: string;
   etag?: string;
+  id: string;
   name: string;
+  type: "file" | "folder";
 }
 
 export interface EntryInfo extends Info {
-  size?: number;
   created_at?: string;
-  modified_at?: string;
-  trashed_at?: string;
-  purged_at?: string;
-  description?: string;
   item_status: "active" | "trashed" | "deleted";
+  modified_at?: string;
   parent?: Info;
+  size?: number;
 }
 
 const ROOT_FOLDER: EntryInfo = {
@@ -58,8 +55,18 @@ const ROOT_FOLDER: EntryInfo = {
   item_status: "active",
 };
 
+interface Cache {
+  info: Info | null;
+  time: number;
+}
+
+export interface BoxFileSystemOptions extends FileSystemOptions {
+  cacheMaxAgeMS?: number;
+}
+
 export class BoxFileSystem extends AbstractFileSystem {
   private readonly id: string;
+  private readonly infoMap: { [fullPath: string]: Cache } = {};
   private readonly isBasicClient: boolean;
   private readonly sdk: BoxSDK;
 
@@ -69,9 +76,11 @@ export class BoxFileSystem extends AbstractFileSystem {
     repository: string,
     credentials: BoxCredentials,
     developerTokenOrEnterpriseId: string,
-    options?: FileSystemOptions
+    options?: BoxFileSystemOptions
   ) {
     super(repository, options);
+    const boxOptions = this.options as BoxFileSystemOptions;
+    if (!boxOptions.cacheMaxAgeMS) boxOptions.cacheMaxAgeMS = 10000;
     this.id = developerTokenOrEnterpriseId;
     if (credentials.appAuth) {
       this.sdk = BoxSDK.getPreconfiguredInstance(credentials);
@@ -129,6 +138,18 @@ export class BoxFileSystem extends AbstractFileSystem {
     return Promise.resolve(new BoxDirectory(this, path));
   }
 
+  public async _getEntryInfo(path: string): Promise<EntryInfo> {
+    const info = await this._getInfo(path);
+    const client = await this._getClient();
+    let entryInfo: EntryInfo;
+    if (info.type === "file") {
+      entryInfo = await client.files.get(info.id);
+    } else {
+      entryInfo = await client.folders.get(info.id);
+    }
+    return entryInfo;
+  }
+
   public _getFile(path: string): Promise<File> {
     return Promise.resolve(new BoxFile(this, path));
   }
@@ -148,24 +169,29 @@ export class BoxFileSystem extends AbstractFileSystem {
     return this._getInfoFromFullPath(fullPath, path);
   }
 
-  public async _getEntryInfo(path: string): Promise<EntryInfo> {
-    const info = await this._getInfo(path);
-    const client = await this._getClient();
-    let entryInfo: EntryInfo;
-    if (info.type === "file") {
-      entryInfo = await client.files.get(info.id);
-    } else {
-      entryInfo = await client.folders.get(info.id);
-    }
-    return entryInfo;
-  }
-
   public async _getInfoFromFullPath(
     fullPath: string,
     originalPath: string
   ): Promise<Info> {
     if (fullPath === "/") {
       return ROOT_FOLDER;
+    }
+
+    const cache = this.infoMap[fullPath];
+    if (typeof cache !== "undefined") {
+      const cacheMaxAgeMS = (this.options as BoxFileSystemOptions)
+        .cacheMaxAgeMS as number;
+      if (Date.now() <= cache.time + cacheMaxAgeMS) {
+        if (!cache.info) {
+          throw createError({
+            name: NotFoundError.name,
+            repository: this.repository,
+            path: originalPath,
+          });
+        }
+        return cache.info;
+      }
+      delete this.infoMap[fullPath];
     }
 
     const parentPath = getParentPath(fullPath);
@@ -176,10 +202,12 @@ export class BoxFileSystem extends AbstractFileSystem {
       const childPath =
         (parentPath === "/" ? "" : parentPath) + "/" + entry.name;
       if (fullPath === childPath) {
+        this.infoMap[fullPath] = { info: entry, time: Date.now() };
         return entry;
       }
     }
 
+    this.infoMap[fullPath] = { info: null, time: Date.now() };
     throw createError({
       name: NotFoundError.name,
       repository: this.repository,
