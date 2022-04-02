@@ -143,7 +143,7 @@ export class BoxFileSystem extends AbstractFileSystem {
     return fullPath;
   }
 
-  public async _getInfo(path: string): Promise<EntryInfo> {
+  public async _getInfo(path: string): Promise<Info> {
     const fullPath = this._getFullPath(path);
     const info = await this._getInfoFromFullPath(fullPath);
     if (!info) {
@@ -156,9 +156,21 @@ export class BoxFileSystem extends AbstractFileSystem {
     return info;
   }
 
+  public async _getEntryInfo(path: string): Promise<EntryInfo> {
+    const info = await this._getInfo(path);
+    const client = await this._getClient();
+    let entryInfo: EntryInfo;
+    if (info.type === "file") {
+      entryInfo = await client.files.get(info.id);
+    } else {
+      entryInfo = await client.folders.get(info.id);
+    }
+    return entryInfo;
+  }
+
   public async _getInfoFromFullPath(
     fullPath: string
-  ): Promise<EntryInfo | undefined> {
+  ): Promise<Info | undefined> {
     if (fullPath === "/") {
       return ROOT_FOLDER;
     }
@@ -180,7 +192,7 @@ export class BoxFileSystem extends AbstractFileSystem {
   public async _head(path: string, _options: HeadOptions): Promise<Stats> {
     const repository = this.repository;
     try {
-      const info = await this._getInfo(path);
+      const info = await this._getEntryInfo(path);
       if (info.item_status !== "active") {
         throw createError({
           name: NotFoundError.name,
