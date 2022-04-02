@@ -55,18 +55,8 @@ const ROOT_FOLDER: EntryInfo = {
   item_status: "active",
 };
 
-interface Cache {
-  info: Info | null;
-  time: number;
-}
-
-export interface BoxFileSystemOptions extends FileSystemOptions {
-  cacheMaxAgeMS?: number;
-}
-
 export class BoxFileSystem extends AbstractFileSystem {
   private readonly id: string;
-  private readonly infoMap: { [fullPath: string]: Cache } = {};
   private readonly isBasicClient: boolean;
   private readonly sdk: BoxSDK;
 
@@ -76,11 +66,9 @@ export class BoxFileSystem extends AbstractFileSystem {
     repository: string,
     credentials: BoxCredentials,
     developerTokenOrEnterpriseId: string,
-    options?: BoxFileSystemOptions
+    options?: FileSystemOptions
   ) {
     super(repository, options);
-    const boxOptions = this.options as BoxFileSystemOptions;
-    if (!boxOptions.cacheMaxAgeMS) boxOptions.cacheMaxAgeMS = 10000;
     this.id = developerTokenOrEnterpriseId;
     if (credentials.appAuth) {
       this.sdk = BoxSDK.getPreconfiguredInstance(credentials);
@@ -177,23 +165,6 @@ export class BoxFileSystem extends AbstractFileSystem {
       return ROOT_FOLDER;
     }
 
-    const cache = this.infoMap[fullPath];
-    if (typeof cache !== "undefined") {
-      const cacheMaxAgeMS = (this.options as BoxFileSystemOptions)
-        .cacheMaxAgeMS as number;
-      if (Date.now() <= cache.time + cacheMaxAgeMS) {
-        if (!cache.info) {
-          throw createError({
-            name: NotFoundError.name,
-            repository: this.repository,
-            path: originalPath,
-          });
-        }
-        return cache.info;
-      }
-      delete this.infoMap[fullPath];
-    }
-
     const parentPath = getParentPath(fullPath);
     const parent = await this._getInfoFromFullPath(parentPath, originalPath);
     const client = await this._getClient();
@@ -202,12 +173,10 @@ export class BoxFileSystem extends AbstractFileSystem {
       const childPath =
         (parentPath === "/" ? "" : parentPath) + "/" + entry.name;
       if (fullPath === childPath) {
-        this.infoMap[fullPath] = { info: entry, time: Date.now() };
         return entry;
       }
     }
 
-    this.infoMap[fullPath] = { info: null, time: Date.now() };
     throw createError({
       name: NotFoundError.name,
       repository: this.repository,
