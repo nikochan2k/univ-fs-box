@@ -145,15 +145,7 @@ export class BoxFileSystem extends AbstractFileSystem {
 
   public async _getInfo(path: string): Promise<Info> {
     const fullPath = this._getFullPath(path);
-    const info = await this._getInfoFromFullPath(fullPath);
-    if (!info) {
-      throw createError({
-        name: NotFoundError.name,
-        repository: this.repository,
-        path,
-      });
-    }
-    return info;
+    return this._getInfoFromFullPath(fullPath, path);
   }
 
   public async _getEntryInfo(path: string): Promise<EntryInfo> {
@@ -169,16 +161,17 @@ export class BoxFileSystem extends AbstractFileSystem {
   }
 
   public async _getInfoFromFullPath(
-    fullPath: string
-  ): Promise<Info | undefined> {
+    fullPath: string,
+    originalPath: string
+  ): Promise<Info> {
     if (fullPath === "/") {
       return ROOT_FOLDER;
     }
 
     const parentPath = getParentPath(fullPath);
-    let parent = await this._getInfoFromFullPath(parentPath);
+    const parent = await this._getInfoFromFullPath(parentPath, originalPath);
     const client = await this._getClient();
-    const items = await client.folders.getItems(parent?.id);
+    const items = await client.folders.getItems(parent.id);
     for (const entry of items.entries) {
       const childPath =
         (parentPath === "/" ? "" : parentPath) + "/" + entry.name;
@@ -186,7 +179,12 @@ export class BoxFileSystem extends AbstractFileSystem {
         return entry;
       }
     }
-    return undefined;
+
+    throw createError({
+      name: NotFoundError.name,
+      repository: this.repository,
+      path: originalPath,
+    });
   }
 
   public async _head(path: string, _options: HeadOptions): Promise<Stats> {

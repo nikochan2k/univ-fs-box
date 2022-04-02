@@ -17,31 +17,28 @@ export class BoxDirectory extends AbstractDirectory {
     const path = this.path;
     try {
       const fullPath = bfs._getFullPath(path);
-      const parentPath = getParentPath(fullPath);
-      const parent = await bfs._getInfoFromFullPath(parentPath);
+      const info = await bfs._getInfoFromFullPath(fullPath, path);
       const client = await bfs._getClient();
-      const list: EntryInfo[] = await client.folders.getItems(parent?.id);
+      const result = await client.folders.getItems(info.id, {
+        fields: "name,created_at,modified_at,etag",
+      });
       const items: Item[] = [];
-      for (const info of list) {
-        if (info.item_status !== "active") {
-          continue;
-        }
-
-        const item: Item = { path: path + "/" + info.name };
-        const createdDate = new Date(info.created_at as string);
+      for (const e of result.entries as EntryInfo[]) {
+        const item: Item = { path: (path === "/" ? "/" : path + "/") + e.name };
+        const createdDate = new Date(e.created_at as string);
         const created = createdDate.getTime();
         if (!isNaN(created)) {
           item.created = created;
         }
-        const modifiedDate = new Date(info.modified_at as string);
+        const modifiedDate = new Date(e.modified_at as string);
         const modified = modifiedDate.getTime();
         if (!isNaN(modified)) {
           item.modified = modified;
         }
-        item.etag = info.etag as string;
-        if (info.type === "file") {
+        item.etag = e.etag as string;
+        if (e.type === "file") {
           item.type = EntryType.File;
-          item.size = info.size as number;
+          item.size = e.size as number;
         } else {
           item.type = EntryType.Directory;
         }
