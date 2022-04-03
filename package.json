@@ -26,7 +26,7 @@
     "test": "jest --runInBand"
   },
   "jest": {
-    "testTimeout": 10000,
+    "testTimeout": 15000,
     "moduleFileExtensions": [
       "js",
       "ts",
@@ -62,7 +62,7 @@
   "dependencies": {
     "box-node-sdk": "^2.1.0",
     "tslib": "^2.3.1",
-    "univ-fs": "^0.6.33"
+    "univ-fs": "^0.6.35"
   },
   "author": "Yoshihiro Seki",
   "license": "MIT"
