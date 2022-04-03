@@ -1,6 +1,6 @@
 import BoxClient from "box-node-sdk/lib/box-client";
 import { Readable } from "stream";
-import { bufferConverter, Data } from "univ-conv";
+import { bufferConverter, Data, EMPTY_BUFFER } from "univ-conv";
 import {
   AbstractFile,
   ErrorLike,
@@ -18,22 +18,28 @@ export class BoxFile extends AbstractFile {
     super(bfs, path);
   }
 
-  protected async _load(_stats: Stats, _options: ReadOptions): Promise<Data> {
+  protected async _load(_stats: Stats, options: ReadOptions): Promise<Data> {
     const bfs = this.bfs;
     const path = this.path;
     try {
       const client = await bfs._getClient();
-      const info = await bfs._getInfo(path);
+      const info = await bfs._getEntryInfo(path);
+      if (info.size === 0) {
+        return EMPTY_BUFFER;
+      }
       return new Promise<Data>((resolve, reject) => {
         client.files.getReadStream(
           info.id,
           null,
-          (err: any, stream: Readable) => {
+          (err: any, readable: Readable) => {
             if (err) {
               reject(err);
               return;
             }
-            resolve(stream);
+            this._getConverter()
+              .convert(readable, "buffer", options)
+              .then((buffer) => resolve(buffer))
+              .catch((e) => reject(e));
           }
         );
       });
