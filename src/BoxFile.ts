@@ -1,11 +1,6 @@
 import BoxClient from "box-node-sdk/lib/box-client";
 import { Readable } from "stream";
-import {
-  bufferConverter,
-  Data,
-  readableConverter,
-  readableStreamConverter,
-} from "univ-conv";
+import { bufferConverter, Data } from "univ-conv";
 import {
   AbstractFile,
   ErrorLike,
@@ -69,17 +64,10 @@ export class BoxFile extends AbstractFile {
     const fullPath = bfs._getFullPath(path);
 
     let client: BoxClient;
-    let readable: Readable | undefined;
-    let buffer: Buffer | undefined;
+    let buffer: Buffer;
     try {
       client = await bfs._getClient();
-      if (readableConverter().typeEquals(data)) {
-        readable = data;
-      } else if (readableStreamConverter().typeEquals(data)) {
-        readable = await readableConverter().convert(data);
-      } else {
-        buffer = await bufferConverter().convert(data, options);
-      }
+      buffer = await bufferConverter().convert(data, options);
     } catch (e) {
       throw bfs._error(path, e, true);
     }
@@ -101,17 +89,9 @@ export class BoxFile extends AbstractFile {
           );
         });
         const converter = this._getConverter();
-        readable = await converter.merge(
-          [head, readable ?? (buffer as Buffer)],
-          "readable",
-          options
-        );
+        buffer = await converter.merge([head, buffer], "buffer", options);
       }
-      if (readable) {
-        await client.files.uploadNewFileVersion(info.id, readable);
-      } else {
-        await client.files.uploadNewFileVersion(info.id, buffer);
-      }
+      await client.files.uploadNewFileVersion(info.id, buffer);
       return;
     } catch (e) {
       if ((e as ErrorLike).name !== NotFoundError.name) {
@@ -123,11 +103,7 @@ export class BoxFile extends AbstractFile {
       const parentPath = getParentPath(fullPath);
       const name = getName(fullPath);
       const parent = await bfs._getInfoFromFullPath(parentPath, path);
-      if (readable) {
-        await client.files.uploadFile(parent.id, name, readable);
-      } else {
-        await client.files.uploadFile(parent.id, name, buffer);
-      }
+      await client.files.uploadFile(parent.id, name, buffer);
     } catch (e) {
       throw bfs._error(path, e, true);
     }

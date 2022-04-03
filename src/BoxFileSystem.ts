@@ -196,11 +196,11 @@ export class BoxFileSystem extends AbstractFileSystem {
         });
       }
       const stats: Stats = info as any;
-      const created = new Date(info.created_at as string).getDate();
+      const created = new Date(info.created_at as string).getTime();
       if (!isNaN(created)) {
         stats.created = created;
       }
-      const modified = new Date(info.modified_at as string).getDate();
+      const modified = new Date(info.modified_at as string).getTime();
       if (!isNaN(modified)) {
         stats.modified = modified;
       }
