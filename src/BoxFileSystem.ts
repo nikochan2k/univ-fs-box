@@ -8,13 +8,12 @@ import {
   FileSystemOptions,
   getParentPath,
   HeadOptions,
-  isFileSystemError,
+  isFileSystemException,
   joinPaths,
   NoModificationAllowedError,
   NotFoundError,
   NotReadableError,
   Options,
-  Props,
   Stats,
   URLOptions,
 } from "univ-fs";
@@ -80,18 +79,18 @@ export class BoxFileSystem extends AbstractFileSystem {
   }
 
   public _error(path: string, e: unknown, write: boolean) {
-    if (isFileSystemError(e)) {
+    if (isFileSystemException(e)) {
       return e;
     }
 
     let name: string;
     const code: number = (e as any).response?.statusCode; // eslint-disable-line
     if (code === 404) {
-      name = NotFoundError.name;
+      name = NotFoundError.name!;
     } else if (write) {
-      name = NoModificationAllowedError.name;
+      name = NoModificationAllowedError.name!;
     } else {
-      name = NotReadableError.name;
+      name = NotReadableError.name!;
     }
     return createError({
       name,
@@ -115,7 +114,7 @@ export class BoxFileSystem extends AbstractFileSystem {
     try {
       await this.client.folders.create("0", this.repository);
     } catch (e) {
-      if (e.statusCode !== 409) {
+      if ((e as any).statusCode !== 409) {
         throw e;
       }
     }
@@ -214,7 +213,12 @@ export class BoxFileSystem extends AbstractFileSystem {
     }
   }
 
-  public async _patch(path: string, props: Props, _: Options): Promise<void> {
+  public async _patch(
+    path: string,
+    _stats: Stats,
+    props: Stats,
+    _: Options
+  ): Promise<void> {
     if (props.created) {
       props["created_at"] = new Date(props.created).toISOString();
       delete props.created;
@@ -259,6 +263,18 @@ export class BoxFileSystem extends AbstractFileSystem {
     const info = await this._getInfo(path);
     const client = await this._getClient();
     return client.files.getDownloadURL(info.id);
+  }
+
+  public canPatchAccessed(): boolean {
+    return false;
+  }
+
+  public canPatchCreated(): boolean {
+    return false;
+  }
+
+  public canPatchModified(): boolean {
+    return false;
   }
 
   public supportDirectory(): boolean {

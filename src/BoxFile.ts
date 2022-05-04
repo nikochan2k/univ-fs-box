@@ -18,6 +18,18 @@ export class BoxFile extends AbstractFile {
     super(bfs, path);
   }
 
+  public supportAppend(): boolean {
+    return false;
+  }
+
+  public supportRangeRead(): boolean {
+    return true;
+  }
+
+  public supportRangeWrite(): boolean {
+    return false;
+  }
+
   protected async _load(_stats: Stats, options: ReadOptions): Promise<Data> {
     const bfs = this.bfs;
     const path = this.path;
@@ -30,7 +42,7 @@ export class BoxFile extends AbstractFile {
       return new Promise<Data>((resolve, reject) => {
         client.files.getReadStream(
           info.id,
-          null,
+          undefined,
           (err: any, readable: Readable) => {
             if (err) {
               reject(err);
@@ -84,7 +96,7 @@ export class BoxFile extends AbstractFile {
         const head = await new Promise<Data>((resolve, reject) => {
           client.files.getReadStream(
             info.id,
-            null,
+            undefined,
             (err: any, stream: Readable) => {
               if (err) {
                 reject(err);
