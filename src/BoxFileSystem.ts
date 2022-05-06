@@ -8,7 +8,7 @@ import {
   FileSystemOptions,
   getParentPath,
   HeadOptions,
-  isFileSystemException,
+  isFileSystemError,
   joinPaths,
   NoModificationAllowedError,
   NotFoundError,
@@ -79,8 +79,8 @@ export class BoxFileSystem extends AbstractFileSystem {
   }
 
   public _error(path: string, e: unknown, write: boolean) {
-    if (isFileSystemException(e)) {
-      return e;
+    if (isFileSystemError(e)) {
+      throw e;
     }
 
     let name: string;
@@ -121,7 +121,7 @@ export class BoxFileSystem extends AbstractFileSystem {
     return this.client;
   }
 
-  public _getDirectory(path: string): Promise<Directory> {
+  public _doGetDirectory(path: string): Promise<Directory> {
     return Promise.resolve(new BoxDirectory(this, path));
   }
 
@@ -137,7 +137,7 @@ export class BoxFileSystem extends AbstractFileSystem {
     return entryInfo;
   }
 
-  public _getFile(path: string): Promise<File> {
+  public _doGetFile(path: string): Promise<File> {
     return Promise.resolve(new BoxFile(this, path));
   }
 
@@ -183,7 +183,7 @@ export class BoxFileSystem extends AbstractFileSystem {
     });
   }
 
-  public async _head(path: string, _options: HeadOptions): Promise<Stats> {
+  public async _doHead(path: string, _options: HeadOptions): Promise<Stats> {
     const repository = this.repository;
     try {
       const info = await this._getEntryInfo(path);
@@ -213,7 +213,7 @@ export class BoxFileSystem extends AbstractFileSystem {
     }
   }
 
-  public async _patch(
+  public async _doPatch(
     path: string,
     _stats: Stats,
     props: Stats,
@@ -246,7 +246,7 @@ export class BoxFileSystem extends AbstractFileSystem {
     }
   }
 
-  public async _toURL(
+  public async _doToURL(
     path: string,
     _isDirectory: boolean,
     options?: URLOptions

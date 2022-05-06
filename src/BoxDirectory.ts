@@ -12,7 +12,7 @@ export class BoxDirectory extends AbstractDirectory {
     super(bfs, path);
   }
 
-  async _list(): Promise<Item[]> {
+  public async _doList(): Promise<Item[]> {
     const bfs = this.bfs;
     const path = this.path;
     try {
@@ -50,7 +50,7 @@ export class BoxDirectory extends AbstractDirectory {
     }
   }
 
-  async _mkcol(): Promise<void> {
+  public async _doMkcol(): Promise<void> {
     const bfs = this.bfs;
     const path = this.path;
     try {
@@ -67,7 +67,7 @@ export class BoxDirectory extends AbstractDirectory {
     }
   }
 
-  async _rmdir(): Promise<void> {
+  public async _doRmdir(): Promise<void> {
     const bfs = this.bfs;
     const path = this.path;
     try {

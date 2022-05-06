@@ -3,10 +3,8 @@ import { Readable } from "stream";
 import { bufferConverter, Data, EMPTY_BUFFER } from "univ-conv";
 import {
   AbstractFile,
-  ErrorLike,
   getName,
   getParentPath,
-  NotFoundError,
   ReadOptions,
   Stats,
   WriteOptions,
@@ -18,19 +16,7 @@ export class BoxFile extends AbstractFile {
     super(bfs, path);
   }
 
-  public supportAppend(): boolean {
-    return false;
-  }
-
-  public supportRangeRead(): boolean {
-    return true;
-  }
-
-  public supportRangeWrite(): boolean {
-    return false;
-  }
-
-  protected async _load(_stats: Stats, options: ReadOptions): Promise<Data> {
+  public async _doRead(_stats: Stats, options: ReadOptions): Promise<Data> {
     const bfs = this.bfs;
     const path = this.path;
     try {
@@ -60,7 +46,7 @@ export class BoxFile extends AbstractFile {
     }
   }
 
-  protected async _rm(): Promise<void> {
+  public async _doRm(): Promise<void> {
     const bfs = this.bfs;
     const path = this.path;
     try {
@@ -72,9 +58,9 @@ export class BoxFile extends AbstractFile {
     }
   }
 
-  protected async _save(
+  public async _doWrite(
     data: Data,
-    _stats: Stats | undefined,
+    stats: Stats | undefined,
     options: WriteOptions
   ): Promise<void> {
     const bfs = this.bfs;
@@ -91,39 +77,29 @@ export class BoxFile extends AbstractFile {
     }
 
     try {
-      const info = await bfs._getInfoFromFullPath(fullPath, path);
-      if (options.append) {
-        const head = await new Promise<Data>((resolve, reject) => {
-          client.files.getReadStream(
-            info.id,
-            undefined,
-            (err: any, stream: Readable) => {
-              if (err) {
-                reject(err);
-                return;
-              }
-              resolve(stream);
-            }
-          );
-        });
-        const converter = this._getConverter();
-        buffer = await converter.merge([head, buffer], "buffer", options);
+      if (stats) {
+        const info = await bfs._getInfoFromFullPath(fullPath, path);
+        await client.files.uploadNewFileVersion(info.id, buffer);
+      } else {
+        const parentPath = getParentPath(fullPath);
+        const name = getName(fullPath);
+        const parent = await bfs._getInfoFromFullPath(parentPath, path);
+        await client.files.uploadFile(parent.id, name, buffer);
       }
-      await client.files.uploadNewFileVersion(info.id, buffer);
-      return;
-    } catch (e) {
-      if ((e as ErrorLike).name !== NotFoundError.name) {
-        throw bfs._error(path, e, true);
-      }
-    }
-
-    try {
-      const parentPath = getParentPath(fullPath);
-      const name = getName(fullPath);
-      const parent = await bfs._getInfoFromFullPath(parentPath, path);
-      await client.files.uploadFile(parent.id, name, buffer);
     } catch (e) {
       throw bfs._error(path, e, true);
     }
+  }
+
+  public supportAppend(): boolean {
+    return false;
+  }
+
+  public supportRangeRead(): boolean {
+    return true;
+  }
+
+  public supportRangeWrite(): boolean {
+    return false;
   }
 }
