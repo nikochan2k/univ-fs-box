@@ -1,4 +1,4 @@
-import { OnExists, OnNoParent, OnNotExist } from "univ-fs";
+import { ExistsAction, NoParentAction, NotExistAction } from "univ-fs";
 import { BoxFileSystem } from "../BoxFileSystem";
 import secret from "./secret-developer.json";
 
@@ -9,15 +9,15 @@ export const fs = new BoxFileSystem(
 );
 
 export const setup = async () => {
-  const root = await fs.getDirectory("/");
+  const root = fs.getDirectory("/");
   await root.rm({
-    onNotExist: OnNotExist.Ignore,
+    onNotExist: NotExistAction.Ignore,
     recursive: true,
     ignoreHook: true,
   });
   await root.mkdir({
-    onExists: OnExists.Ignore,
-    onNoParent: OnNoParent.Error,
+    onExists: ExistsAction.Skip,
+    onNoParent: NoParentAction.Error,
     ignoreHook: true,
   });
 };

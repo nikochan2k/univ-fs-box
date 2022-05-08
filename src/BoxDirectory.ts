@@ -67,7 +67,7 @@ export class BoxDirectory extends AbstractDirectory {
     }
   }
 
-  public async _doRmdir(): Promise<void> {
+  public async _doDelete(): Promise<void> {
     const bfs = this.bfs;
     const path = this.path;
     try {

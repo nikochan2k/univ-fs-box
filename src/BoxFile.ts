@@ -46,7 +46,7 @@ export class BoxFile extends AbstractFile {
     }
   }
 
-  public async _doRm(): Promise<void> {
+  public async _doDelete(): Promise<void> {
     const bfs = this.bfs;
     const path = this.path;
     try {

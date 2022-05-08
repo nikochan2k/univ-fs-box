@@ -121,8 +121,8 @@ export class BoxFileSystem extends AbstractFileSystem {
     return this.client;
   }
 
-  public _doGetDirectory(path: string): Promise<Directory> {
-    return Promise.resolve(new BoxDirectory(this, path));
+  public _doGetDirectory(path: string): Directory {
+    return new BoxDirectory(this, path);
   }
 
   public async _getEntryInfo(path: string): Promise<EntryInfo> {
@@ -137,8 +137,8 @@ export class BoxFileSystem extends AbstractFileSystem {
     return entryInfo;
   }
 
-  public _doGetFile(path: string): Promise<File> {
-    return Promise.resolve(new BoxFile(this, path));
+  public _doGetFile(path: string): File {
+    return new BoxFile(this, path);
   }
 
   public _getFullPath(path: string) {
@@ -246,16 +246,16 @@ export class BoxFileSystem extends AbstractFileSystem {
     }
   }
 
-  public async _doToURL(
+  public async _doGetURL(
     path: string,
     _isDirectory: boolean,
-    options?: URLOptions
+    options: URLOptions
   ): Promise<string> {
-    options = { urlType: "GET", ...options };
-    if (options.urlType !== "GET") {
+    options = { method: "GET", ...options };
+    if (options.method !== "GET") {
       throw this._error(
         path,
-        { message: `"${options.urlType}" is not supported` }, // eslint-disable-line
+        { message: `"${options.method}" is not supported` }, // eslint-disable-line
         false
       );
     }
